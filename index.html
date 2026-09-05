@@ -3,323 +3,646 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stellar Swarm - Interactive Particle System</title>
-    <!-- Using Tailwind CSS for basic UI styling (mostly for the overlay/controls if any) -->
+    <title>Advanced Particle Matrix</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
-        /* Custom CSS for the canvas and body to ensure a full-screen, immersive experience */
         body, html {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #050505; /* Deep space black */
-            font-family: 'Inter', sans-serif;
+            background-color: #030303;
+            font-family: 'Space Grotesk', sans-serif;
+            color: white;
         }
 
-        #particle-canvas {
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        canvas {
             display: block;
             width: 100%;
             height: 100%;
-            /* Adds a subtle glow effect to everything on the canvas */
-            filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.3));
         }
 
-        /* Styling for the UI overlay */
-        .ui-overlay {
+        .controls {
             position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 9999px; /* Fully rounded */
-            padding: 10px 20px;
-            color: white;
-            text-align: center;
-            pointer-events: none; /* Let clicks pass through to the canvas */
-            transition: opacity 0.5s ease;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            top: 70px;
+            right: 20px;
+            z-index: 10;
+            background: rgba(10, 10, 15, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 16px;
+            width: 280px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        .ui-overlay h1 {
-            font-size: 0.875rem;
-            font-weight: 500;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            margin: 0;
-            background: linear-gradient(90deg, #00f2fe 0%, #4facfe 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .controls:hover {
+            transform: translateY(-5px);
         }
         
-        .ui-overlay p {
-            font-size: 0.75rem;
+        .controls.minimized {
+            transform: translateY(-20px);
+            opacity: 0 !important;
+            pointer-events: none;
+        }
+
+        .ui-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 20;
+            background: rgba(10, 10, 15, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-family: inherit;
+            font-weight: 500;
+            transition: all 0.3s;
+            opacity: 0;
+        }
+
+        .ui-toggle:hover {
+            background: rgba(79, 172, 254, 0.2);
+            border-color: #4facfe;
+        }
+
+        .controls h2 {
+            margin: 0 0 15px 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+        }
+
+        .control-group {
+            margin-bottom: 12px;
+        }
+        
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
             color: #94a3b8;
-            margin-top: 2px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select, input[type="range"] {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 8px;
+            border-radius: 6px;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input[type="range"]:focus {
+            border-color: #4facfe;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            padding: 0;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 2px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #4facfe;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(79, 172, 254, 0.5);
+            transition: transform 0.1s;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .stats {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 10;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.4);
+            pointer-events: none;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            color: #4facfe;
+            animation: pulse 2s infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.3; transform: translate(-50%, -50%) scale(0.95); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+            100% { opacity: 0.3; transform: translate(-50%, -50%) scale(0.95); }
         }
     </style>
 </head>
 <body>
 
-    <!-- The main canvas element where the magic happens -->
-    <canvas id="particle-canvas"></canvas>
+    <div id="loading" class="loading">INITIALIZING SYSTEM...</div>
 
-    <!-- A simple, elegant UI overlay -->
-    <div class="ui-overlay" id="ui">
-        <h1>Stellar Swarm</h1>
-        <p>Move mouse to attract & repel</p>
+    <div id="canvas-container">
+        <canvas id="particle-canvas"></canvas>
     </div>
 
-    <script>
-        const canvas = document.getElementById('particle-canvas');
-        const ctx = canvas.getContext('2d', { alpha: false }); // Optimize by disabling alpha background if we fill it constantly
+    <button id="toggle-ui" class="ui-toggle">⚙️ Hide Config</button>
+
+    <!-- UI Overlay for Configuration -->
+    <div class="controls" id="controls" style="opacity: 0;">
+        <h2>System Config</h2>
         
-        // Setup variables
+        <div class="control-group">
+            <label for="interaction-mode">Interaction Mode</label>
+            <select id="interaction-mode">
+                <option value="repel">Kinetic Repulsion</option>
+                <option value="attract">Gravitational Pull</option>
+                <option value="vortex">Orbital Vortex</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="particle-count">Density (Particles)</label>
+            <input type="range" id="particle-count" min="100" max="1500" value="600" step="100">
+        </div>
+        
+        <div class="control-group">
+            <label for="connection-radius">Network Radius</label>
+            <input type="range" id="connection-radius" min="20" max="150" value="80" step="10">
+        </div>
+
+        <div class="control-group">
+            <label for="color-scheme">Visual Spectrum</label>
+            <select id="color-scheme">
+                <option value="cyber">Cyberpunk (Cyan/Pink)</option>
+                <option value="plasma">Plasma (Orange/Red)</option>
+                <option value="matrix">Matrix (Greens)</option>
+                <option value="ethereal">Ethereal (Whites/Blues)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="stats" id="stats">FPS: 0 | Particles: 0</div>
+
+    <script>
+        // DOM Elements
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d', { alpha: false }); // Optimize performance
+        const statsEl = document.getElementById('stats');
+        
+        // UI Controls
+        const modeSelect = document.getElementById('interaction-mode');
+        const densityInput = document.getElementById('particle-count');
+        const radiusInput = document.getElementById('connection-radius');
+        const colorSelect = document.getElementById('color-scheme');
+        const loadingEl = document.getElementById('loading');
+        const controlsEl = document.getElementById('controls');
+        const toggleUiBtn = document.getElementById('toggle-ui');
+
+        // Global State Variables
         let width, height;
         let particles = [];
-        // The number of particles - adjust based on performance needs
-        // A higher number looks more complex but requires more processing power
-        const PARTICLE_COUNT = 800; 
+        let animationFrameId;
+        let lastTime = 0;
+        let frameCount = 0;
+        let fps = 0;
+        let lastFpsTime = 0;
         
-        // Mouse interaction object
-        const mouse = {
-            x: null,
-            y: null,
-            radius: 150, // Area of effect
-            isActive: false
+        // Advanced Features State
+        let shockwaves = [];
+        let idleTime = 0;
+        let isIdle = true;
+        let fakeAngle = 0;
+
+        // Configuration Object (Driven by UI)
+        const config = {
+            particleCount: parseInt(densityInput.value),
+            mode: modeSelect.value, // 'repel', 'attract', 'vortex'
+            connectRadius: parseInt(radiusInput.value),
+            colorTheme: colorSelect.value,
+            baseFriction: 0.92,
+            maxSpeed: 8,
+            mouseRadius: 180
         };
 
-        // Base colors for the particles (Cyan and Purple theme)
-        const hueBase1 = 190; // Cyan
-        const hueBase2 = 280; // Purple
-        let colorOffset = 0;
+        const themes = {
+            cyber:  { base: [190, 320], glow: 'rgba(0, 242, 254, 0.2)' },
+            plasma: { base: [10, 45],   glow: 'rgba(255, 69, 0, 0.2)' },
+            matrix: { base: [120, 150], glow: 'rgba(0, 255, 65, 0.2)' },
+            ethereal:{ base: [210, 240], glow: 'rgba(200, 230, 255, 0.15)' }
+        };
 
-        // Function to resize canvas to fill the window
+        // Mouse/Touch tracking
+        const pointer = {
+            x: null,
+            y: null,
+            isActive: false,
+            vx: 0, // Velocity of mouse
+            vy: 0,
+            lastX: 0,
+            lastY: 0
+        };
+
         function resizeCanvas() {
+            const oldWidth = width || window.innerWidth;
+            const oldHeight = height || window.innerHeight;
+            
             width = window.innerWidth;
             height = window.innerHeight;
             canvas.width = width;
             canvas.height = height;
             
-            // Re-initialize particles on resize to ensure they distribute well
-            initParticles();
+            // Fix: Smoothly adjust particle origins instead of resetting the whole scene
+            if (particles.length > 0) {
+                particles.forEach(p => {
+                    p.originX = (p.originX / oldWidth) * width;
+                    p.originY = (p.originY / oldHeight) * height;
+                });
+            } else {
+                initParticles();
+            }
         }
 
-        // Event listener for window resize
-        window.addEventListener('resize', resizeCanvas);
-
-        // Mouse event listeners to track cursor position
-        window.addEventListener('mousemove', (e) => {
-            mouse.x = e.x;
-            mouse.y = e.y;
-            mouse.isActive = true;
+        window.addEventListener('resize', () => {
+            // Debounce resize to prevent performance hits
+            clearTimeout(window.resizeTimer);
+            window.resizeTimer = setTimeout(resizeCanvas, 100);
         });
 
-        // Hide mouse effect when it leaves the window
-        window.addEventListener('mouseout', () => {
-            mouse.x = undefined;
-            mouse.y = undefined;
-            mouse.isActive = false;
-        });
-        
-        // Add touch support for mobile devices
-        window.addEventListener('touchstart', (e) => {
-            mouse.x = e.touches[0].clientX;
-            mouse.y = e.touches[0].clientY;
-            mouse.isActive = true;
-        });
-        
+        function updatePointerPosition(x, y) {
+            idleTime = 0; // Reset idle timer
+            isIdle = false;
+            
+            pointer.lastX = pointer.x || x;
+            pointer.lastY = pointer.y || y;
+            pointer.x = x;
+            pointer.y = y;
+            // Calculate mouse velocity for advanced interaction
+            pointer.vx = pointer.x - pointer.lastX;
+            pointer.vy = pointer.y - pointer.lastY;
+            pointer.isActive = true;
+        }
+
+        window.addEventListener('mousemove', (e) => updatePointerPosition(e.clientX, e.clientY));
         window.addEventListener('touchmove', (e) => {
-            mouse.x = e.touches[0].clientX;
-            mouse.y = e.touches[0].clientY;
-            mouse.isActive = true;
+            e.preventDefault(); // Prevent scrolling while interacting
+            updatePointerPosition(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
+
+        const disablePointer = () => { pointer.isActive = false; };
+        window.addEventListener('mouseout', disablePointer);
+        window.addEventListener('touchend', disablePointer);
+
+        // Click / Tap Event for Shockwaves
+        window.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('#controls') || e.target.closest('#toggle-ui')) return;
+            shockwaves.push({ 
+                x: e.clientX, 
+                y: e.clientY, 
+                radius: 10, 
+                maxRadius: Math.min(width, height) * 0.4, 
+                strength: 35 
+            });
         });
         
-        window.addEventListener('touchend', () => {
-            mouse.isActive = false;
+        // Toggle UI Visibility
+        toggleUiBtn.addEventListener('click', () => {
+            controlsEl.classList.toggle('minimized');
+            toggleUiBtn.innerText = controlsEl.classList.contains('minimized') ? '⚙️ Show Config' : '⚙️ Hide Config';
         });
 
-        // Particle Class - Defines properties and behaviors of individual points
+        modeSelect.addEventListener('change', (e) => config.mode = e.target.value);
+        colorSelect.addEventListener('change', (e) => {
+            config.colorTheme = e.target.value;
+            // Reassign hues to existing particles based on new theme
+            particles.forEach(p => p.assignHue());
+        });
+        radiusInput.addEventListener('input', (e) => config.connectRadius = parseInt(e.target.value));
+        densityInput.addEventListener('change', (e) => {
+            config.particleCount = parseInt(e.target.value);
+            initParticles(); // Re-init with new count
+        });
+
         class Particle {
             constructor(x, y) {
                 this.x = x;
                 this.y = y;
-                // Base position for returning to 'home' or creating structure
-                this.baseX = x;
-                this.baseY = y;
+                // Original position to act as an anchor point
+                this.originX = x;
+                this.originY = y;
                 
-                // Random size for variety
-                this.size = Math.random() * 2 + 1;
+                // Randomize properties for organic look
+                this.size = Math.random() * 2 + 0.5;
+                this.mass = this.size * 1.5;
                 
-                // Mass affects how much force is needed to move it (parallax effect)
-                this.mass = this.size; 
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
                 
-                // Velocity vectors
-                this.vx = 0;
-                this.vy = 0;
+                this.assignHue();
                 
-                // Friction to slow particles down over time (simulating air resistance)
-                this.friction = 0.95;
-                
-                // Elasticity for bouncing (spring effect)
-                this.springFactor = 0.05;
-                
-                // Individual color variation based on position
-                const ratio = this.y / height;
-                this.baseHue = hueBase1 * (1 - ratio) + hueBase2 * ratio;
+                // Individual springiness factor
+                this.spring = 0.01 + Math.random() * 0.02;
+            }
+
+            assignHue() {
+                const theme = themes[config.colorTheme];
+                const range = theme.base[1] - theme.base[0];
+                // Distribute hue based on vertical position + randomness
+                const verticalRatio = this.originY / height;
+                this.hue = theme.base[0] + (range * verticalRatio) + (Math.random() * 20 - 10);
             }
 
             update() {
-                // 1. Calculate distance from mouse
-                let dx = mouse.x - this.x;
-                let dy = mouse.y - this.y;
-                let distance = Math.sqrt(dx * dx + dy * dy);
+                // 1. Natural wandering
+                this.vx += (Math.random() - 0.5) * 0.1;
+                this.vy += (Math.random() - 0.5) * 0.1;
 
-                // 2. Mouse interaction logic
-                if (mouse.isActive && distance < mouse.radius) {
-                    // Calculate force based on how close the mouse is (inverse square law approximation)
-                    // The closer, the stronger the force.
-                    let forceDirectionX = dx / distance;
-                    let forceDirectionY = dy / distance;
-                    
-                    // The force magnitude peaks closer to the center, pushing away
-                    let force = (mouse.radius - distance) / mouse.radius;
-                    
-                    // Apply force to velocity (repel effect)
-                    // We divide by mass so smaller particles move faster
-                    let pushX = forceDirectionX * force * 5 * (1/this.mass);
-                    let pushY = forceDirectionY * force * 5 * (1/this.mass);
-                    
-                    this.vx -= pushX;
-                    this.vy -= pushY;
-                } else {
-                    // 3. Return to base position logic (Spring effect)
-                    // Calculate distance to original home position
-                    let homeDx = this.baseX - this.x;
-                    let homeDy = this.baseY - this.y;
-                    
-                    // Pull back towards home based on spring factor
-                    this.vx += homeDx * this.springFactor;
-                    this.vy += homeDy * this.springFactor;
+                // 2. Pointer Interaction
+                if (pointer.isActive || isIdle) { // Fix: Allow idle AI to interact
+                    const dx = pointer.x - this.x;
+                    const dy = pointer.y - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < config.mouseRadius) {
+                        // Force intensity based on distance
+                        const force = (config.mouseRadius - distance) / config.mouseRadius;
+                        
+                        // Direction vectors
+                        const dirX = dx / distance;
+                        const dirY = dy / distance;
+
+                        switch (config.mode) {
+                            case 'repel':
+                                // Push away (stronger for lighter particles)
+                                this.vx -= dirX * force * 2 * (1 / this.mass);
+                                this.vy -= dirY * force * 2 * (1 / this.mass);
+                                break;
+                            case 'attract':
+                                // Pull in, but add tangential force to create orbits
+                                this.vx += dirX * force * 0.5;
+                                this.vy += dirY * force * 0.5;
+                                break;
+                            case 'vortex':
+                                // Perpendicular force for swirling
+                                // Swirl direction depends on pointer movement or static rotation
+                                const swirlDir = (pointer.vx > 0 || isIdle) ? 1 : -1;
+                                this.vx += (dirY * force * 2 * swirlDir) - (dirX * force * 0.2); // Mostly perpendicular, slightly inward
+                                this.vy -= (dirX * force * 2 * swirlDir) + (dirY * force * 0.2);
+                                break;
+                        }
+                    }
                 }
 
-                // 4. Add subtle wandering motion
-                // Creates a "swarming" or "floating" look even when undisturbed
-                this.vx += (Math.random() - 0.5) * 0.2;
-                this.vy += (Math.random() - 0.5) * 0.2;
+                // Apply Shockwave forces
+                for (let i = 0; i < shockwaves.length; i++) {
+                    const wave = shockwaves[i];
+                    const dx = this.x - wave.x;
+                    const dy = this.y - wave.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // Wave boundary thickness
+                    if (Math.abs(dist - wave.radius) < 40) {
+                        const force = (40 - Math.abs(dist - wave.radius)) / 40;
+                        this.vx += (dx / dist) * force * wave.strength * (1/this.mass);
+                        this.vy += (dy / dist) * force * wave.strength * (1/this.mass);
+                    }
+                }
 
-                // 5. Apply friction
-                this.vx *= this.friction;
-                this.vy *= this.friction;
+                // 3. Return to origin (Elasticity)
+                // If not interacting strongly, slowly drift back to original grid/position
+                const distToOriginX = this.originX - this.x;
+                const distToOriginY = this.originY - this.y;
+                this.vx += distToOriginX * this.spring;
+                this.vy += distToOriginY * this.spring;
 
-                // 6. Update actual position based on final velocity
+                // 4. Apply Friction (Damping)
+                this.vx *= config.baseFriction;
+                this.vy *= config.baseFriction;
+
+                // 5. Speed Limiting
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > config.maxSpeed) {
+                    this.vx = (this.vx / speed) * config.maxSpeed;
+                    this.vy = (this.vy / speed) * config.maxSpeed;
+                }
+
+                // 6. Update Position
                 this.x += this.vx;
                 this.y += this.vy;
             }
 
-            draw(ctx) {
-                // Calculate color dynamically
-                // Slowly shift the overall hue over time, while keeping the base gradient
-                let currentHue = (this.baseHue + colorOffset) % 360;
+            draw() {
+                // Calculate speed for visual effects (faster = brighter/larger)
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                const lightness = Math.min(50 + (speed * 8), 90); // Cap at 90%
                 
-                // Calculate speed to affect brightness (faster = brighter)
-                let speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-                let lightness = Math.min(50 + speed * 10, 80); // Cap lightness at 80%
-                
-                ctx.fillStyle = `hsl(${currentHue}, 100%, ${lightness}%)`;
-                
+                // Dynamic size based on speed
+                const currentSize = this.size + (speed * 0.2);
+
+                ctx.fillStyle = `hsl(${this.hue}, 90%, ${lightness}%)`;
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.arc(this.x, this.y, currentSize, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
 
-        // Function to create the initial array of particles
         function initParticles() {
             particles = [];
-            // Distribute particles evenly or randomly across the screen
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                // Random distribution
-                let x = Math.random() * width;
-                let y = Math.random() * height;
+            
+            // Distribute particles using a chaotic grid for better initial structure
+            const cols = Math.floor(Math.sqrt(config.particleCount * (width / height)));
+            const rows = Math.floor(config.particleCount / cols);
+            
+            const cellW = width / cols;
+            const cellH = height / rows;
+
+            for (let i = 0; i < config.particleCount; i++) {
+                // Determine grid cell
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                
+                // Place roughly in cell center, with significant jitter
+                const x = (col * cellW) + (cellW / 2) + ((Math.random() - 0.5) * cellW * 0.8);
+                const y = (row * cellH) + (cellH / 2) + ((Math.random() - 0.5) * cellH * 0.8);
                 
                 particles.push(new Particle(x, y));
             }
+            updateStats();
         }
 
-        // Connecting close particles with lines to create a "web" or "constellation" effect
-        // This is what makes the system look highly complex
-        function connectParticles() {
-            let opacityValue = 1;
-            // Iterate through every pair of particles (O(N^2) complexity, hence why we limit particle count)
-            for (let a = 0; a < particles.length; a++) {
-                for (let b = a; b < particles.length; b++) {
-                    let dx = particles[a].x - particles[b].x;
-                    let dy = particles[a].y - particles[b].y;
-                    let distance = Math.sqrt(dx * dx + dy * dy);
+        // Optimization: Spatial partitioning (Grid based) could be used here for massive counts,
+        // but for < 1500, a simple nested loop is often fast enough in modern browsers 
+        // if we use squared distances to avoid Math.sqrt.
+        function renderConnections() {
+            const maxDistSq = config.connectRadius * config.connectRadius;
+            const pointerRadiusSq = config.mouseRadius * config.mouseRadius;
 
-                    // If they are close enough, draw a line between them
-                    const maxDistance = 80;
-                    if (distance < maxDistance) {
-                        // Line opacity is inversely proportional to distance (closer = more opaque)
-                        opacityValue = 1 - (distance / maxDistance);
-                        // Make connections near the mouse brighter
-                        let distToMouseA = mouse.isActive ? Math.sqrt(Math.pow(particles[a].x - mouse.x, 2) + Math.pow(particles[a].y - mouse.y, 2)) : 1000;
-                        
-                        let strokeColor = `rgba(100, 200, 255, ${opacityValue * 0.2})`;
-                        
-                        // Highlight connections interacting with the mouse
-                        if(distToMouseA < mouse.radius) {
-                             strokeColor = `rgba(255, 255, 255, ${opacityValue * 0.5})`;
+            // Use slightly additive blending for glowing network effect
+            ctx.globalCompositeOperation = 'screen';
+
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const p1 = particles[i];
+                    const p2 = particles[j];
+
+                    const dx = p1.x - p2.x;
+                    const dy = p1.y - p2.y;
+                    const distSq = dx * dx + dy * dy;
+
+                    if (distSq < maxDistSq) {
+                        // Calculate base opacity based on distance
+                        let opacity = 1 - (distSq / maxDistSq);
+                        opacity *= 0.15; // Base line brightness
+
+                        // Enhance opacity if near pointer
+                        if (pointer.isActive) {
+                            const pDx = p1.x - pointer.x;
+                            const pDy = p1.y - pointer.y;
+                            const distToPointerSq = pDx * pDx + pDy * pDy;
+                            
+                            if(distToPointerSq < pointerRadiusSq) {
+                                // Boost brightness near interaction
+                                opacity += (1 - (distToPointerSq / pointerRadiusSq)) * 0.4;
+                            }
                         }
 
-                        ctx.strokeStyle = strokeColor;
-                        ctx.lineWidth = 0.5;
+                        // Determine line color by blending hues of connected particles
+                        const avgHue = (p1.hue + p2.hue) / 2;
+                        ctx.strokeStyle = `hsla(${avgHue}, 80%, 60%, ${opacity})`;
+                        ctx.lineWidth = 1;
+                        
                         ctx.beginPath();
-                        ctx.moveTo(particles[a].x, particles[a].y);
-                        ctx.lineTo(particles[b].x, particles[b].y);
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
                         ctx.stroke();
                     }
                 }
             }
+            
+            // Reset blend mode for drawing particles themselves
+            ctx.globalCompositeOperation = 'source-over';
         }
 
-        // Main animation loop
-        function animate() {
-            // Request next frame to create a loop
-            requestAnimationFrame(animate);
+        function animate(timestamp) {
+            // Calculate FPS
+            if (!lastTime) lastTime = timestamp;
+            const delta = timestamp - lastTime;
+            lastTime = timestamp;
             
-            // Clear the canvas. Using a semi-transparent black creates a slight trail effect
-            // However, for this specific crisp look, we'll fill completely
-            ctx.fillStyle = 'rgba(5, 5, 5, 1)';
-            ctx.fillRect(0, 0, width, height);
+            // Idle AI Logic (Creates cinematic auto-movement when user is away)
+            idleTime += delta;
+            if (idleTime > 2500) {
+                isIdle = true;
+                pointer.isActive = true;
+                fakeAngle += 0.001 * delta;
+                
+                // Lissajous curve for organic wandering
+                pointer.x = (width / 2) + Math.sin(fakeAngle * 1.3) * (width * 0.35);
+                pointer.y = (height / 2) + Math.cos(fakeAngle * 1.7) * (height * 0.35);
+                pointer.vx = 1; // Force positive swirl
+            }
 
-            // Gradually shift colors over time
-            colorOffset += 0.2;
-
-            // Update and draw all particles
-            for (let i = 0; i < particles.length; i++) {
-                particles[i].update();
-                particles[i].draw(ctx);
+            // Update & Draw Shockwaves
+            for (let i = shockwaves.length - 1; i >= 0; i--) {
+                shockwaves[i].radius += 12 * (delta / 16); // Time-based expansion
+                if (shockwaves[i].radius > shockwaves[i].maxRadius) {
+                    shockwaves.splice(i, 1);
+                } else {
+                    // Draw shockwave ring visually
+                    const alpha = 1 - (shockwaves[i].radius / shockwaves[i].maxRadius);
+                    ctx.beginPath();
+                    ctx.arc(shockwaves[i].x, shockwaves[i].y, shockwaves[i].radius, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.5})`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
             }
             
-            // Draw connections between them (creates the complex geometry)
-            connectParticles();
+            frameCount++;
+            if (timestamp - lastFpsTime > 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastFpsTime = timestamp;
+                updateStats();
+            }
+
+            // Draw Background with trails effect
+            // Using a solid fill but highly opaque creates a "motion blur" or "trail" effect
+            ctx.fillStyle = 'rgba(3, 3, 3, 0.25)'; // Higher alpha = shorter trails
+            ctx.fillRect(0, 0, width, height);
+
+            // Render logic
+            renderConnections();
+            
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+            }
+
+            animationFrameId = requestAnimationFrame(animate);
         }
 
-        // Initialization sequence ensuring DOM is ready
+        function updateStats() {
+            statsEl.innerText = `FPS: ${fps} | Particles: ${particles.length} | Mode: ${config.mode.toUpperCase()}`;
+        }
+
         window.onload = () => {
-            resizeCanvas(); // Set initial size and create particles
-            animate();      // Start the loop
+            // Initial setup
+            resizeCanvas();
             
-            // Hide UI after a few seconds for a clean presentation
+            // Fake loading sequence for dramatic effect
             setTimeout(() => {
-                const ui = document.getElementById('ui');
-                if(ui) ui.style.opacity = '0';
-            }, 4000);
+                loadingEl.style.opacity = '0';
+                setTimeout(() => {
+                    loadingEl.style.display = 'none';
+                    controlsEl.style.opacity = '1';
+                    toggleUiBtn.style.opacity = '1'; // Show toggle btn
+                    
+                    // Start animation loop
+                    animationFrameId = requestAnimationFrame(animate);
+                }, 500);
+            }, 1200);
         };
     </script>
 </body>
