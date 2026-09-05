@@ -1,195 +1,992 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-  />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NEXUS ENGINE</title>
 
-  <meta
-    name="description"
-    content="Nexus Engine — Modular real-time 2D and 3D graphics laboratory."
-  />
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#03050b;color:#dffcff;font-family:Inter,Arial,sans-serif}
+body{background:
+ radial-gradient(circle at 50% 50%,#08152a 0,#03050b 55%,#010207 100%)}
 
-  <meta name="theme-color" content="#05070d" />
+#app{position:fixed;inset:0}
+canvas{display:block;width:100%;height:100%}
 
-  <title>NEXUS ENGINE — Real-Time Graphics Laboratory</title>
+#hud{
+ position:fixed;z-index:10;top:22px;left:50%;transform:translateX(-50%);
+ width:min(94%,1100px);display:flex;align-items:center;justify-content:space-between;
+ pointer-events:none
+}
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap"
-    rel="stylesheet"
-  />
+.brand{
+ font-size:18px;font-weight:800;letter-spacing:5px;color:#fff;
+ text-shadow:0 0 18px #00eaff88
+}
+.brand span{color:#00eaff}
+
+.status{
+ font-size:10px;letter-spacing:2px;color:#70ffcf;
+ padding:7px 11px;border:1px solid #70ffcf44;
+ background:#06150f99;border-radius:20px
+}
+
+#tabs{
+ position:fixed;z-index:20;top:72px;left:50%;transform:translateX(-50%);
+ display:flex;padding:4px;border:1px solid #ffffff14;border-radius:30px;
+ background:#050914cc;backdrop-filter:blur(12px)
+}
+
+button{
+ border:0;background:transparent;color:#71808f;cursor:pointer;
+ font:700 11px Arial;letter-spacing:1.5px;padding:12px 22px;border-radius:24px;
+ transition:.25s
+}
+button:hover{color:#fff}
+button.active{
+ color:#001318;background:#00eaff;
+ box-shadow:0 0 25px #00eaff55
+}
+
+#panel{
+ position:fixed;z-index:20;left:24px;bottom:24px;
+ width:260px;padding:16px;border:1px solid #ffffff12;
+ border-radius:14px;background:#050914c9;backdrop-filter:blur(14px);
+ font-size:11px
+}
+
+.label{
+ color:#536574;font-size:9px;letter-spacing:2px;margin-bottom:8px
+}
+.value{
+ color:#dffcff;font-weight:700;letter-spacing:1px
+}
+
+.row{
+ display:flex;justify-content:space-between;margin:8px 0
+}
+
+#hint{
+ position:fixed;z-index:10;right:24px;bottom:24px;
+ color:#40515f;font-size:10px;letter-spacing:1px;text-align:right
+}
+
+#loading{
+ position:fixed;inset:0;z-index:100;background:#02040a;
+ display:flex;align-items:center;justify-content:center;
+ flex-direction:column;transition:opacity .7s
+}
+#loading.hide{opacity:0;pointer-events:none}
+.loader-title{
+ font-size:24px;font-weight:900;letter-spacing:8px;
+ text-shadow:0 0 30px #00eaff
+}
+.loader-sub{margin-top:14px;color:#45606c;font-size:9px;letter-spacing:3px}
+
+@media(max-width:600px){
+ #hud{top:14px}
+ #tabs{top:60px}
+ #panel{left:12px;bottom:12px;width:220px}
+ #hint{right:12px;bottom:12px;font-size:8px}
+ button{padding:10px 13px;font-size:9px}
+}
+</style>
 </head>
 
 <body>
-  <div id="app">
 
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-mark">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
+<div id="app"></div>
 
-        <div>
-          <div class="brand-name">NEXUS</div>
-          <div class="brand-subtitle">REAL-TIME GRAPHICS ENGINE</div>
-        </div>
-      </div>
+<div id="loading">
+  <div class="loader-title">NEXUS</div>
+  <div class="loader-sub">INITIALIZING VISUAL SYSTEM</div>
+</div>
 
-      <div class="system-status">
-        <span class="status-dot"></span>
-        <span id="systemStatus">SYSTEM ONLINE</span>
-      </div>
-    </header>
+<div id="hud">
+  <div class="brand">NEXUS<span>.</span>ENGINE</div>
+  <div class="status" id="status">● ONLINE</div>
+</div>
 
-    <nav class="module-nav" aria-label="Engine modules">
+<div id="tabs">
+  <button id="neuralBtn" class="active">NEURAL KINETICS · 2D</button>
+  <button id="quantumBtn">QUANTUM CORE · 3D</button>
+</div>
 
-      <button
-        class="module-button active"
-        data-module="neural"
-        type="button"
-      >
-        <span class="module-index">01</span>
+<div id="panel">
+  <div class="label">ACTIVE MODULE</div>
+  <div class="value" id="moduleName">NEURAL KINETICS</div>
 
-        <span class="module-copy">
-          <strong>NEURAL KINETICS</strong>
-          <small>2D PHYSICS FIELD</small>
-        </span>
-      </button>
-
-      <button
-        class="module-button"
-        data-module="quantum"
-        type="button"
-      >
-        <span class="module-index">02</span>
-
-        <span class="module-copy">
-          <strong>QUANTUM CORE</strong>
-          <small>GPU PARTICLE FIELD</small>
-        </span>
-      </button>
-
-    </nav>
-
-    <main id="viewport">
-
-      <div id="moduleContainer"></div>
-
-      <div id="bootScreen">
-        <div class="boot-core"></div>
-
-        <div class="boot-title">NEXUS ENGINE</div>
-
-        <div class="boot-progress">
-          <div id="bootProgressBar"></div>
-        </div>
-
-        <div id="bootText">
-          INITIALIZING VISUAL SYSTEM...
-        </div>
-      </div>
-
-      <div class="module-overlay">
-
-        <div class="module-heading">
-          <span id="moduleEyebrow">MODULE 01</span>
-          <h1 id="moduleTitle">NEURAL KINETICS</h1>
-          <p id="moduleDescription">
-            Interactive 2D particle physics and emergent force fields.
-          </p>
-        </div>
-
-        <div class="controls-hint">
-          <span>DRAG</span>
-          <span>CREATE SHOCKWAVE</span>
-          <span>1 / 2 SWITCH MODULE</span>
-        </div>
-
-      </div>
-
-      <aside id="debugPanel" class="debug-panel hidden">
-
-        <div class="debug-title">
-          <span>RUNTIME TELEMETRY</span>
-          <button id="closeDebug" type="button">×</button>
-        </div>
-
-        <div class="debug-row">
-          <span>FPS</span>
-          <strong id="debugFps">60</strong>
-        </div>
-
-        <div class="debug-row">
-          <span>FRAME</span>
-          <strong id="debugFrame">16.7 ms</strong>
-        </div>
-
-        <div class="debug-row">
-          <span>MODULE</span>
-          <strong id="debugModule">NEURAL</strong>
-        </div>
-
-        <div class="debug-row">
-          <span>PARTICLES</span>
-          <strong id="debugParticles">0</strong>
-        </div>
-
-        <div class="debug-row">
-          <span>QUALITY</span>
-          <strong id="debugQuality">BALANCED</strong>
-        </div>
-
-        <div class="debug-row">
-          <span>RENDERER</span>
-          <strong id="debugRenderer">CANVAS 2D</strong>
-        </div>
-
-      </aside>
-
-      <div class="bottom-hud">
-
-        <div class="hud-group">
-          <span class="hud-label">FPS</span>
-          <strong id="fpsValue">60</strong>
-        </div>
-
-        <div class="hud-divider"></div>
-
-        <div class="hud-group">
-          <span class="hud-label">PARTICLES</span>
-          <strong id="particleValue">0</strong>
-        </div>
-
-        <div class="hud-divider"></div>
-
-        <div class="hud-group">
-          <span class="hud-label">ENGINE</span>
-          <strong id="engineValue">2D</strong>
-        </div>
-
-        <div class="hud-actions">
-          <button id="pauseButton" type="button">PAUSE</button>
-          <button id="resetButton" type="button">RESET</button>
-          <button id="debugButton" type="button">DEBUG</button>
-        </div>
-
-      </div>
-
-    </main>
-
-    <div class="transition-screen" id="transitionScreen">
-      <div class="transition-line"></div>
-      <span>SWITCHING MODULE</span>
-    </div>
-
+  <div class="row">
+    <span>PARTICLES</span>
+    <span id="particleCount">0</span>
   </div>
 
-  <script type="module" src="/src/main.js"></script>
+  <div class="row">
+    <span>FPS</span>
+    <span id="fps">60</span>
+  </div>
+
+  <div class="row">
+    <span>ENGINE</span>
+    <span id="engine">CANVAS 2D</span>
+  </div>
+</div>
+
+<div id="hint">
+  CLICK · CREATE SHOCKWAVE<br>
+  MOVE · CONTROL FIELD<br>
+  1 / 2 · SWITCH MODULES
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+
+import * as THREE from "three";
+
+/* =========================================================
+   NEXUS ENGINE
+   Single-file modular runtime
+   ========================================================= */
+
+const app = document.getElementById("app");
+const neuralBtn = document.getElementById("neuralBtn");
+const quantumBtn = document.getElementById("quantumBtn");
+
+const moduleName = document.getElementById("moduleName");
+const particleCount = document.getElementById("particleCount");
+const fpsLabel = document.getElementById("fps");
+const engineLabel = document.getElementById("engine");
+const status = document.getElementById("status");
+
+let activeModule = null;
+let activeName = "";
+let lastTime = performance.now();
+let frames = 0;
+let fps = 60;
+
+
+/* =========================================================
+   PERFORMANCE MONITOR
+   ========================================================= */
+
+function updateFPS(now){
+
+  frames++;
+
+  if(now-lastTime >= 500){
+
+    fps = Math.round(frames * 1000 / (now-lastTime));
+    fpsLabel.textContent = fps;
+
+    frames = 0;
+    lastTime = now;
+  }
+}
+
+
+/* =========================================================
+   MODULE MANAGER
+   ========================================================= */
+
+const ModuleManager = {
+
+  switchTo(name){
+
+    if(activeName === name) return;
+
+    status.textContent = "● SWITCHING";
+
+    if(activeModule){
+      activeModule.stop();
+      activeModule.dispose();
+      activeModule = null;
+    }
+
+    if(name === "neural"){
+      activeModule = new NeuralModule();
+      activeName = "neural";
+
+      moduleName.textContent = "NEURAL KINETICS";
+      engineLabel.textContent = "CANVAS 2D";
+
+      neuralBtn.classList.add("active");
+      quantumBtn.classList.remove("active");
+    }
+
+    if(name === "quantum"){
+      activeModule = new QuantumModule();
+      activeName = "quantum";
+
+      moduleName.textContent = "QUANTUM CORE";
+      engineLabel.textContent = "WEBGL / THREE.JS";
+
+      neuralBtn.classList.remove("active");
+      quantumBtn.classList.add("active");
+    }
+
+    activeModule.start();
+
+    setTimeout(()=>{
+      status.textContent = "● ONLINE";
+    },300);
+  }
+};
+
+
+/* =========================================================
+   NEURAL KINETICS
+   ========================================================= */
+
+class NeuralModule{
+
+  constructor(){
+
+    this.canvas = document.createElement("canvas");
+    this.canvas.style.position = "absolute";
+    this.canvas.style.inset = "0";
+
+    app.appendChild(this.canvas);
+
+    this.ctx = this.canvas.getContext("2d",{
+      alpha:true,
+      desynchronized:true
+    });
+
+    this.running = false;
+    this.raf = 0;
+
+    this.mouse = {
+      x:innerWidth/2,
+      y:innerHeight/2,
+      active:false
+    };
+
+    this.shockwaves = [];
+
+    this.particles = [];
+
+    const count = Math.min(
+      2800,
+      Math.max(1000,Math.floor(innerWidth*innerHeight/500))
+    );
+
+    for(let i=0;i<count;i++){
+
+      const angle = Math.random()*Math.PI*2;
+      const radius = Math.random()*Math.min(innerWidth,innerHeight)*.42;
+
+      this.particles.push({
+
+        x:innerWidth/2 + Math.cos(angle)*radius,
+        y:innerHeight/2 + Math.sin(angle)*radius,
+
+        vx:(Math.random()-.5)*.5,
+        vy:(Math.random()-.5)*.5,
+
+        size:Math.random()*1.7+.4,
+
+        energy:Math.random(),
+
+        hue:Math.random()*80+175
+      });
+    }
+
+    particleCount.textContent =
+      this.particles.length.toLocaleString();
+
+    this.resize = this.resize.bind(this);
+    this.move = this.move.bind(this);
+    this.click = this.click.bind(this);
+
+    window.addEventListener("resize",this.resize);
+    window.addEventListener("pointermove",this.move);
+    window.addEventListener("pointerdown",this.click);
+
+    this.resize();
+  }
+
+
+  start(){
+
+    if(this.running) return;
+
+    this.running = true;
+
+    const loop = (time)=>{
+
+      if(!this.running) return;
+
+      updateFPS(time);
+
+      this.update();
+      this.render();
+
+      this.raf = requestAnimationFrame(loop);
+    };
+
+    this.raf = requestAnimationFrame(loop);
+  }
+
+
+  stop(){
+
+    this.running = false;
+
+    if(this.raf){
+      cancelAnimationFrame(this.raf);
+      this.raf = 0;
+    }
+  }
+
+
+  update(){
+
+    const cx = this.mouse.x;
+    const cy = this.mouse.y;
+
+    for(const p of this.particles){
+
+      let dx = cx-p.x;
+      let dy = cy-p.y;
+
+      let d2 = dx*dx+dy*dy;
+
+      if(this.mouse.active && d2 < 250000){
+
+        const d = Math.sqrt(d2)+.001;
+
+        /*
+          Attraction near the cursor.
+          Vortex component creates orbital motion.
+        */
+
+        const force = (1-d/500)*.025;
+
+        p.vx += dx/d*force;
+        p.vy += dy/d*force;
+
+        p.vx += -dy/d*.012;
+        p.vy += dx/d*.012;
+      }
+
+      /*
+        Center gravity keeps the field alive.
+      */
+
+      const centerX = innerWidth/2;
+      const centerY = innerHeight/2;
+
+      dx = centerX-p.x;
+      dy = centerY-p.y;
+
+      p.vx += dx*.000012;
+      p.vy += dy*.000012;
+
+      /*
+        Shockwaves
+      */
+
+      for(const s of this.shockwaves){
+
+        dx = p.x-s.x;
+        dy = p.y-s.y;
+
+        const d = Math.sqrt(dx*dx+dy*dy)+.001;
+        const delta = Math.abs(d-s.radius);
+
+        if(delta < 80){
+
+          const strength =
+            (1-delta/80)*s.power;
+
+          p.vx += dx/d*strength;
+          p.vy += dy/d*strength;
+
+          p.energy = Math.min(1,p.energy+.08);
+        }
+      }
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      p.vx *= .982;
+      p.vy *= .982;
+
+      p.energy *= .992;
+
+      /*
+        Screen wrapping.
+      */
+
+      if(p.x < -30) p.x = innerWidth+30;
+      if(p.x > innerWidth+30) p.x = -30;
+
+      if(p.y < -30) p.y = innerHeight+30;
+      if(p.y > innerHeight+30) p.y = -30;
+    }
+
+    for(const s of this.shockwaves){
+
+      s.radius += 12;
+      s.power *= .965;
+      s.life--;
+    }
+
+    this.shockwaves =
+      this.shockwaves.filter(s=>s.life>0);
+  }
+
+
+  render(){
+
+    const ctx = this.ctx;
+
+    ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
+
+    /*
+      Soft trails.
+    */
+
+    ctx.fillStyle = "rgba(2,5,11,.20)";
+    ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+
+    /*
+      Draw particles.
+    */
+
+    for(const p of this.particles){
+
+      const glow = 2 + p.energy*7;
+
+      ctx.beginPath();
+
+      ctx.fillStyle =
+        `hsla(${p.hue},100%,${65+p.energy*30}%,${.35+p.energy*.65})`;
+
+      ctx.shadowBlur = glow;
+      ctx.shadowColor = "#00eaff";
+
+      ctx.arc(
+        p.x,
+        p.y,
+        p.size + p.energy*1.2,
+        0,
+        Math.PI*2
+      );
+
+      ctx.fill();
+    }
+
+    ctx.shadowBlur = 0;
+
+    /*
+      Shockwaves.
+    */
+
+    for(const s of this.shockwaves){
+
+      ctx.beginPath();
+
+      ctx.strokeStyle =
+        `rgba(0,235,255,${s.power*.7})`;
+
+      ctx.lineWidth = 1.5;
+
+      ctx.arc(
+        s.x,
+        s.y,
+        s.radius,
+        0,
+        Math.PI*2
+      );
+
+      ctx.stroke();
+    }
+  }
+
+
+  resize(){
+
+    const dpr = Math.min(devicePixelRatio || 1,2);
+
+    this.canvas.width = innerWidth*dpr;
+    this.canvas.height = innerHeight*dpr;
+
+    this.canvas.style.width = innerWidth+"px";
+    this.canvas.style.height = innerHeight+"px";
+
+    this.ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+
+  move(e){
+
+    this.mouse.x = e.clientX;
+    this.mouse.y = e.clientY;
+    this.mouse.active = true;
+  }
+
+
+  click(e){
+
+    this.shockwaves.push({
+
+      x:e.clientX,
+      y:e.clientY,
+      radius:10,
+      power:1.5,
+      life:80
+    });
+  }
+
+
+  dispose(){
+
+    this.stop();
+
+    window.removeEventListener("resize",this.resize);
+    window.removeEventListener("pointermove",this.move);
+    window.removeEventListener("pointerdown",this.click);
+
+    this.particles.length = 0;
+    this.shockwaves.length = 0;
+
+    this.canvas.remove();
+  }
+}
+
+
+/* =========================================================
+   QUANTUM CORE
+   ========================================================= */
+
+class QuantumModule{
+
+  constructor(){
+
+    this.running = false;
+
+    this.scene =
+      new THREE.Scene();
+
+    this.scene.fog =
+      new THREE.FogExp2(0x02050b,.025);
+
+    this.camera =
+      new THREE.PerspectiveCamera(
+        60,
+        innerWidth/innerHeight,
+        .1,
+        1000
+      );
+
+    this.camera.position.z = 22;
+
+    this.renderer =
+      new THREE.WebGLRenderer({
+        antialias:true,
+        alpha:true,
+        powerPreference:"high-performance"
+      });
+
+    this.renderer.setPixelRatio(
+      Math.min(devicePixelRatio || 1,1.5)
+    );
+
+    this.renderer.setSize(
+      innerWidth,
+      innerHeight
+    );
+
+    app.appendChild(this.renderer.domElement);
+
+    this.group = new THREE.Group();
+
+    this.scene.add(this.group);
+
+    this.count = 15000;
+
+    this.positions =
+      new Float32Array(this.count*3);
+
+    this.colors =
+      new Float32Array(this.count*3);
+
+    this.base =
+      new Float32Array(this.count*3);
+
+    this.targets =
+      new Float32Array(this.count*3);
+
+    this.geometry =
+      new THREE.BufferGeometry();
+
+    this.geometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(
+        this.positions,3
+      )
+    );
+
+    this.geometry.setAttribute(
+      "color",
+      new THREE.BufferAttribute(
+        this.colors,3
+      )
+    );
+
+    this.material =
+      new THREE.PointsMaterial({
+
+        size:.065,
+        vertexColors:true,
+        transparent:true,
+        opacity:.9,
+        blending:THREE.AdditiveBlending,
+        depthWrite:false
+      });
+
+    this.points =
+      new THREE.Points(
+        this.geometry,
+        this.material
+      );
+
+    this.group.add(this.points);
+
+    this.time = 0;
+
+    this.mouseX = 0;
+    this.mouseY = 0;
+
+    this.form = 0;
+
+    this.resize = this.resize.bind(this);
+    this.pointer = this.pointer.bind(this);
+
+    window.addEventListener(
+      "resize",this.resize
+    );
+
+    window.addEventListener(
+      "pointermove",this.pointer
+    );
+
+    this.createSphere();
+    this.createTargets();
+
+    particleCount.textContent =
+      this.count.toLocaleString();
+
+    this.resize();
+  }
+
+
+  createSphere(){
+
+    const golden =
+      Math.PI*(3-Math.sqrt(5));
+
+    for(let i=0;i<this.count;i++){
+
+      const y =
+        1-(i/(this.count-1))*2;
+
+      const radius =
+        Math.sqrt(1-y*y);
+
+      const theta =
+        golden*i;
+
+      const x =
+        Math.cos(theta)*radius;
+
+      const z =
+        Math.sin(theta)*radius;
+
+      const r =
+        5.5 + (Math.random()-.5)*.25;
+
+      const index = i*3;
+
+      this.base[index] =
+        x*r;
+
+      this.base[index+1] =
+        y*r;
+
+      this.base[index+2] =
+        z*r;
+    }
+  }
+
+
+  createTargets(){
+
+    for(let i=0;i<this.count;i++){
+
+      const t = i/this.count;
+      const a = t*Math.PI*20;
+
+      /*
+        Torus-like quantum structure.
+      */
+
+      const R = 4.2;
+      const r = 1.6;
+
+      const x =
+        (R+r*Math.cos(a*3))*
+        Math.cos(a);
+
+      const y =
+        r*Math.sin(a*3);
+
+      const z =
+        (R+r*Math.cos(a*3))*
+        Math.sin(a);
+
+      const index=i*3;
+
+      this.targets[index]=x;
+      this.targets[index+1]=y;
+      this.targets[index+2]=z;
+    }
+  }
+
+
+  start(){
+
+    if(this.running) return;
+
+    this.running = true;
+
+    this.renderer.setAnimationLoop(
+      (time)=>{
+        if(!this.running) return;
+
+        updateFPS(time);
+
+        this.animate(time);
+      }
+    );
+  }
+
+
+  animate(time){
+
+    this.time = time*.001;
+
+    const position =
+      this.geometry.attributes.position;
+
+    const color =
+      this.geometry.attributes.color;
+
+    const morph =
+      (Math.sin(this.time*.55)+1)*.5;
+
+    for(let i=0;i<this.count;i++){
+
+      const index=i*3;
+
+      let sx=this.base[index];
+      let sy=this.base[index+1];
+      let sz=this.base[index+2];
+
+      let tx=this.targets[index];
+      let ty=this.targets[index+1];
+      let tz=this.targets[index+2];
+
+      /*
+        Morph between sphere and torus.
+      */
+
+      let x =
+        sx*(1-morph)+tx*morph;
+
+      let y =
+        sy*(1-morph)+ty*morph;
+
+      let z =
+        sz*(1-morph)+tz*morph;
+
+      /*
+        Quantum wave deformation.
+      */
+
+      const wave =
+        Math.sin(
+          Math.sqrt(x*x+y*y+z*z)*1.7
+          -this.time*3
+        )*.18;
+
+      x += x*wave;
+      y += y*wave;
+      z += z*wave;
+
+      /*
+        Mouse influence.
+      */
+
+      x += this.mouseX*.8;
+      y += this.mouseY*.8;
+
+      position.array[index]=x;
+      position.array[index+1]=y;
+      position.array[index+2]=z;
+
+      const energy =
+        (Math.sin(
+          this.time*2+i*.012
+        )+1)*.5;
+
+      /*
+        Cyan → violet → magenta.
+      */
+
+      color.array[index] =
+        .1 + energy*.5;
+
+      color.array[index+1] =
+        .65 - energy*.25;
+
+      color.array[index+2] =
+        1.0;
+    }
+
+    position.needsUpdate=true;
+    color.needsUpdate=true;
+
+    this.group.rotation.y =
+      this.time*.16;
+
+    this.group.rotation.x =
+      Math.sin(this.time*.3)*.18;
+
+    this.renderer.render(
+      this.scene,
+      this.camera
+    );
+  }
+
+
+  pointer(e){
+
+    this.mouseX =
+      (e.clientX/innerWidth-.5)*2;
+
+    this.mouseY =
+      -(e.clientY/innerHeight-.5)*2;
+  }
+
+
+  resize(){
+
+    this.camera.aspect =
+      innerWidth/innerHeight;
+
+    this.camera.updateProjectionMatrix();
+
+    this.renderer.setSize(
+      innerWidth,
+      innerHeight
+    );
+  }
+
+
+  stop(){
+
+    this.running = false;
+
+    this.renderer.setAnimationLoop(null);
+  }
+
+
+  dispose(){
+
+    this.stop();
+
+    window.removeEventListener(
+      "resize",this.resize
+    );
+
+    window.removeEventListener(
+      "pointermove",this.pointer
+    );
+
+    this.geometry.dispose();
+    this.material.dispose();
+
+    this.scene.remove(this.group);
+
+    this.renderer.dispose();
+    this.renderer.domElement.remove();
+  }
+}
+
+
+/* =========================================================
+   INPUT
+   ========================================================= */
+
+neuralBtn.onclick =
+  ()=>ModuleManager.switchTo("neural");
+
+quantumBtn.onclick =
+  ()=>ModuleManager.switchTo("quantum");
+
+window.addEventListener("keydown",(e)=>{
+
+  if(e.key==="1")
+    ModuleManager.switchTo("neural");
+
+  if(e.key==="2")
+    ModuleManager.switchTo("quantum");
+});
+
+
+/* =========================================================
+   PAGE VISIBILITY
+   ========================================================= */
+
+document.addEventListener(
+  "visibilitychange",
+  ()=>{
+    if(!activeModule) return;
+
+    if(document.hidden){
+
+      activeModule.stop();
+
+    }else{
+
+      activeModule.start();
+    }
+  }
+);
+
+
+/* =========================================================
+   START
+   ========================================================= */
+
+ModuleManager.switchTo("neural");
+
+setTimeout(()=>{
+  document
+    .getElementById("loading")
+    .classList.add("hide");
+},700);
+
+</script>
 </body>
 </html>
