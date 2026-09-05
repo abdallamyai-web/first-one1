@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stellar Swarm - Interactive Particle System</title>
+    <!-- Using Tailwind CSS for basic UI styling (mostly for the overlay/controls if any) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS for the canvas and body to ensure a full-screen, immersive experience */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #050505; /* Deep space black */
+            font-family: 'Inter', sans-serif;
+        }
+
+        #particle-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            /* Adds a subtle glow effect to everything on the canvas */
+            filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.3));
+        }
+
+        /* Styling for the UI overlay */
+        .ui-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 9999px; /* Fully rounded */
+            padding: 10px 20px;
+            color: white;
+            text-align: center;
+            pointer-events: none; /* Let clicks pass through to the canvas */
+            transition: opacity 0.5s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .ui-overlay h1 {
+            font-size: 0.875rem;
+            font-weight: 500;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin: 0;
+            background: linear-gradient(90deg, #00f2fe 0%, #4facfe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .ui-overlay p {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- The main canvas element where the magic happens -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- A simple, elegant UI overlay -->
+    <div class="ui-overlay" id="ui">
+        <h1>Stellar Swarm</h1>
+        <p>Move mouse to attract & repel</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d', { alpha: false }); // Optimize by disabling alpha background if we fill it constantly
+        
+        // Setup variables
+        let width, height;
+        let particles = [];
+        // The number of particles - adjust based on performance needs
+        // A higher number looks more complex but requires more processing power
+        const PARTICLE_COUNT = 800; 
+        
+        // Mouse interaction object
+        const mouse = {
+            x: null,
+            y: null,
+            radius: 150, // Area of effect
+            isActive: false
+        };
+
+        // Base colors for the particles (Cyan and Purple theme)
+        const hueBase1 = 190; // Cyan
+        const hueBase2 = 280; // Purple
+        let colorOffset = 0;
+
+        // Function to resize canvas to fill the window
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Re-initialize particles on resize to ensure they distribute well
+            initParticles();
+        }
+
+        // Event listener for window resize
+        window.addEventListener('resize', resizeCanvas);
+
+        // Mouse event listeners to track cursor position
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.x;
+            mouse.y = e.y;
+            mouse.isActive = true;
+        });
+
+        // Hide mouse effect when it leaves the window
+        window.addEventListener('mouseout', () => {
+            mouse.x = undefined;
+            mouse.y = undefined;
+            mouse.isActive = false;
+        });
+        
+        // Add touch support for mobile devices
+        window.addEventListener('touchstart', (e) => {
+            mouse.x = e.touches[0].clientX;
+            mouse.y = e.touches[0].clientY;
+            mouse.isActive = true;
+        });
+        
+        window.addEventListener('touchmove', (e) => {
+            mouse.x = e.touches[0].clientX;
+            mouse.y = e.touches[0].clientY;
+            mouse.isActive = true;
+        });
+        
+        window.addEventListener('touchend', () => {
+            mouse.isActive = false;
+        });
+
+        // Particle Class - Defines properties and behaviors of individual points
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                // Base position for returning to 'home' or creating structure
+                this.baseX = x;
+                this.baseY = y;
+                
+                // Random size for variety
+                this.size = Math.random() * 2 + 1;
+                
+                // Mass affects how much force is needed to move it (parallax effect)
+                this.mass = this.size; 
+                
+                // Velocity vectors
+                this.vx = 0;
+                this.vy = 0;
+                
+                // Friction to slow particles down over time (simulating air resistance)
+                this.friction = 0.95;
+                
+                // Elasticity for bouncing (spring effect)
+                this.springFactor = 0.05;
+                
+                // Individual color variation based on position
+                const ratio = this.y / height;
+                this.baseHue = hueBase1 * (1 - ratio) + hueBase2 * ratio;
+            }
+
+            update() {
+                // 1. Calculate distance from mouse
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+
+                // 2. Mouse interaction logic
+                if (mouse.isActive && distance < mouse.radius) {
+                    // Calculate force based on how close the mouse is (inverse square law approximation)
+                    // The closer, the stronger the force.
+                    let forceDirectionX = dx / distance;
+                    let forceDirectionY = dy / distance;
+                    
+                    // The force magnitude peaks closer to the center, pushing away
+                    let force = (mouse.radius - distance) / mouse.radius;
+                    
+                    // Apply force to velocity (repel effect)
+                    // We divide by mass so smaller particles move faster
+                    let pushX = forceDirectionX * force * 5 * (1/this.mass);
+                    let pushY = forceDirectionY * force * 5 * (1/this.mass);
+                    
+                    this.vx -= pushX;
+                    this.vy -= pushY;
+                } else {
+                    // 3. Return to base position logic (Spring effect)
+                    // Calculate distance to original home position
+                    let homeDx = this.baseX - this.x;
+                    let homeDy = this.baseY - this.y;
+                    
+                    // Pull back towards home based on spring factor
+                    this.vx += homeDx * this.springFactor;
+                    this.vy += homeDy * this.springFactor;
+                }
+
+                // 4. Add subtle wandering motion
+                // Creates a "swarming" or "floating" look even when undisturbed
+                this.vx += (Math.random() - 0.5) * 0.2;
+                this.vy += (Math.random() - 0.5) * 0.2;
+
+                // 5. Apply friction
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+
+                // 6. Update actual position based on final velocity
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+
+            draw(ctx) {
+                // Calculate color dynamically
+                // Slowly shift the overall hue over time, while keeping the base gradient
+                let currentHue = (this.baseHue + colorOffset) % 360;
+                
+                // Calculate speed to affect brightness (faster = brighter)
+                let speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                let lightness = Math.min(50 + speed * 10, 80); // Cap lightness at 80%
+                
+                ctx.fillStyle = `hsl(${currentHue}, 100%, ${lightness}%)`;
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Function to create the initial array of particles
+        function initParticles() {
+            particles = [];
+            // Distribute particles evenly or randomly across the screen
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                // Random distribution
+                let x = Math.random() * width;
+                let y = Math.random() * height;
+                
+                particles.push(new Particle(x, y));
+            }
+        }
+
+        // Connecting close particles with lines to create a "web" or "constellation" effect
+        // This is what makes the system look highly complex
+        function connectParticles() {
+            let opacityValue = 1;
+            // Iterate through every pair of particles (O(N^2) complexity, hence why we limit particle count)
+            for (let a = 0; a < particles.length; a++) {
+                for (let b = a; b < particles.length; b++) {
+                    let dx = particles[a].x - particles[b].x;
+                    let dy = particles[a].y - particles[b].y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+
+                    // If they are close enough, draw a line between them
+                    const maxDistance = 80;
+                    if (distance < maxDistance) {
+                        // Line opacity is inversely proportional to distance (closer = more opaque)
+                        opacityValue = 1 - (distance / maxDistance);
+                        // Make connections near the mouse brighter
+                        let distToMouseA = mouse.isActive ? Math.sqrt(Math.pow(particles[a].x - mouse.x, 2) + Math.pow(particles[a].y - mouse.y, 2)) : 1000;
+                        
+                        let strokeColor = `rgba(100, 200, 255, ${opacityValue * 0.2})`;
+                        
+                        // Highlight connections interacting with the mouse
+                        if(distToMouseA < mouse.radius) {
+                             strokeColor = `rgba(255, 255, 255, ${opacityValue * 0.5})`;
+                        }
+
+                        ctx.strokeStyle = strokeColor;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[a].x, particles[a].y);
+                        ctx.lineTo(particles[b].x, particles[b].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        // Main animation loop
+        function animate() {
+            // Request next frame to create a loop
+            requestAnimationFrame(animate);
+            
+            // Clear the canvas. Using a semi-transparent black creates a slight trail effect
+            // However, for this specific crisp look, we'll fill completely
+            ctx.fillStyle = 'rgba(5, 5, 5, 1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Gradually shift colors over time
+            colorOffset += 0.2;
+
+            // Update and draw all particles
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw(ctx);
+            }
+            
+            // Draw connections between them (creates the complex geometry)
+            connectParticles();
+        }
+
+        // Initialization sequence ensuring DOM is ready
+        window.onload = () => {
+            resizeCanvas(); // Set initial size and create particles
+            animate();      // Start the loop
+            
+            // Hide UI after a few seconds for a clean presentation
+            setTimeout(() => {
+                const ui = document.getElementById('ui');
+                if(ui) ui.style.opacity = '0';
+            }, 4000);
+        };
+    </script>
+</body>
+</html>
